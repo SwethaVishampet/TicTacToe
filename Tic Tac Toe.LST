@@ -1,0 +1,497 @@
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 1   
+
+
+C51 COMPILER V9.05, COMPILATION OF MODULE TIC_TAC_TOE
+OBJECT MODULE PLACED IN Tic Tac Toe.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE Tic Tac Toe.c ROM(SMALL) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          // CG3207 Final Demo - Tic Tac Toe Program
+   2          
+   3          #include<REG51.h>
+   4          
+   5          // Pads
+   6          sbit PAD_0  = P3^4; // Play button
+   7          
+   8          
+   9          // Internal LEDs
+  10          sbit LED_0  = P2^6; // Player 1 turn means it glows
+  11          sbit LED_1  = P2^7;     // Player 2 turn means it glows
+  12          
+  13          
+  14          // Board (external LEDs)
+  15          sbit X_0  = P0^0; // See board mapping below for understanding
+  16          sbit Y_0  = P1^0;
+  17          
+  18          sbit X_1  = P0^1;
+  19          sbit Y_1  = P1^1;
+  20                                                                                  
+  21          sbit X_2  = P0^2;
+  22          sbit Y_2  = P1^2;
+  23                                                                                  
+  24          sbit X_3  = P0^3;
+  25          sbit Y_3  = P1^3;
+  26          
+  27          sbit X_4  = P0^4;
+  28          sbit Y_4  = P1^4;
+  29          
+  30          sbit X_5  = P0^5;
+  31          sbit Y_5  = P1^5;
+  32          
+  33          sbit X_6  = P0^6;
+  34          sbit Y_6  = P1^6;
+  35          
+  36          sbit X_7  = P0^7;
+  37          sbit Y_7  = P1^7;
+  38          
+  39          sbit Z_0  = P2^0;
+  40          sbit Z_1  = P2^1;
+  41          
+  42          /******
+  43          Board Layout (for LED)
+  44          
+  45          x0y0   x1y1   x2y2  - If we enable x0, then player 1 choosed (0,0)
+  46          x3y3    x4y4    x5y5 
+  47          x6y6    x7y7    z0z1                              
+  48          
+  49          *******/
+  50          
+  51          // DIP Switch (external input)
+  52          
+  53          sbit DIP_1 = P2^2;
+  54          sbit DIP_2 = P2^3;
+  55          sbit DIP_3 = P2^4;
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 2   
+
+  56          sbit DIP_4 = P2^5;
+  57          
+  58          // Traffic Lights
+  59          
+  60          sbit RED_LIGHT = P3^5;    // Glows if selected position is already full
+  61          sbit YELLOW_LIGHT = P3^6; // Glows if waiting for input
+  62          sbit GREEN_LIGHT = P3^7;  // Glows for 1 sec if input has been accepted
+  63          
+  64          typedef int smallInt;
+  65          
+  66                  unsigned char board[3][3]= {'0'};
+  67                  unsigned char board1[9] = {'0'} ;
+  68          void delayFunction(smallInt loopCounter)
+  69          {
+  70   1                      while(loopCounter--);
+  71   1      }
+  72          
+  73          /*
+  74          void declareWinner(smallInt winner)
+  75          {
+  76                  //TODO
+  77          }
+  78          */
+  79          
+  80          void main()
+  81          {
+  82   1              
+  83   1              int player_turn = 1;// 1 = Player 1, -1 = Player 2 turn
+  84   1              smallInt box_selected; // to store the input
+  85   1              smallInt x = 0; // to split the input into 2
+  86   1              smallInt y = 0; // to split the input into 2
+  87   1              smallInt i; // for the for loop
+  88   1              smallInt error = 0;
+  89   1              int k=0;
+  90   1      
+  91   1              X_0 = 0;
+  92   1              X_1 = 0;
+  93   1              X_2 = 0;
+  94   1              X_3 = 0;
+  95   1              X_4 = 0;
+  96   1              X_5 = 0;
+  97   1              X_6 = 0;
+  98   1              X_7 = 0;
+  99   1              Z_0 = 0;
+ 100   1              
+ 101   1              Y_0 = 0;        
+ 102   1              Y_1 = 0;
+ 103   1              Y_2 = 0;
+ 104   1              Y_3 = 0;
+ 105   1              Y_4 = 0;
+ 106   1              Y_5 = 0;
+ 107   1              Y_6 = 0;
+ 108   1              Y_7 = 0;
+ 109   1              Z_1 = 0;
+ 110   1      
+ 111   1              while(1)
+ 112   1              {
+ 113   2                      YELLOW_LIGHT = 1; 
+ 114   2                      GREEN_LIGHT = 0;
+ 115   2                      RED_LIGHT = 0;
+ 116   2                      error = 0;
+ 117   2                      box_selected = 0;
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 3   
+
+ 118   2                      x = 0;
+ 119   2                      y = 0;                                  
+ 120   2      
+ 121   2                      if(player_turn == 1)
+ 122   2                      {
+ 123   3                              LED_0 = 1;
+ 124   3                              LED_1 = 0;
+ 125   3                      }
+ 126   2                      else if(player_turn == -1)
+ 127   2                      {
+ 128   3                              LED_0 = 0;
+ 129   3                              LED_1 = 1;
+ 130   3                      }
+ 131   2                      if(PAD_0 == 1)
+ 132   2                      {
+ 133   3                              player_turn = player_turn * -1;
+ 134   3      
+ 135   3                              // get DIP input
+ 136   3              
+ 137   3                              YELLOW_LIGHT = 0;
+ 138   3                      
+ 139   3                              if(DIP_4)
+ 140   3                              {
+ 141   4                                      box_selected += 1;  // 2^0 is 1
+ 142   4                              }
+ 143   3                              if(DIP_3)
+ 144   3                              {
+ 145   4                                      box_selected += 2;  // 2^1 is 2
+ 146   4                              }
+ 147   3                              
+ 148   3                              if(DIP_2)
+ 149   3                              {
+ 150   4                                      box_selected += 4;  // 2^2 is 4
+ 151   4                              }
+ 152   3                              
+ 153   3                              if(DIP_1)
+ 154   3                              {
+ 155   4                                      box_selected += 8;  // 2^3 is 8
+ 156   4                              }
+ 157   3                              
+ 158   3                      
+ 159   3                              /****
+ 160   3                              Mapping for box_selected
+ 161   3              
+ 162   3                          x
+ 163   3                      y       0   1   2
+ 164   3                              3       4       5
+ 165   3                              6   7   8
+ 166   3                              *****/
+ 167   3                              k= box_selected;
+ 168   3                               // get coordinates from the DIP input
+ 169   3                              if(box_selected < 3)
+ 170   3                              {
+ 171   4                                      x = 0;
+ 172   4                                      y = box_selected;
+ 173   4                              }
+ 174   3                              else if(box_selected < 6)
+ 175   3                              {
+ 176   4                                      x = 1;
+ 177   4                                      y = box_selected - 3;
+ 178   4                              }
+ 179   3                              else if(box_selected < 9)
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 4   
+
+ 180   3                              {
+ 181   4                                      x = 2;
+ 182   4                                      y = box_selected - 6;
+ 183   4                              }
+ 184   3                              else
+ 185   3                              {
+ 186   4                                      // Error - glow the red LED
+ 187   4                                      RED_LIGHT = 1;
+ 188   4                                      error = 1;
+ 189   4                              }
+ 190   3                              
+ 191   3                              if(error == 0)
+ 192   3                              {                                       
+ 193   4                                      if(board1[k]=='0')
+ 194   4                                      {
+ 195   5                              
+ 196   5                                              board1[k] ='1';// player_turn;
+ 197   5                                              GREEN_LIGHT = 1;
+ 198   5                                              goto qqq;
+ 199   5                                      
+ 200   5                                      }                                
+ 201   4                                      else
+ 202   4                                      {
+ 203   5                                              RED_LIGHT = 1; // already occupied - flash red and exit
+ 204   5                                      }
+ 205   4                              
+ 206   4                      
+ 207   4                                       
+ 208   4      //                              if(board[x][y] == 0)
+ 209   4      //                              {
+ 210   4      //                              
+ 211   4      //                                      board[x][y] = player_turn;
+ 212   4      //                                              GREEN_LIGHT = 1;
+ 213   4      //                                              goto qqq;
+ 214   4      //                                      
+ 215   4      //                              }                                
+ 216   4      //                              else
+ 217   4      //                              {
+ 218   4      //                                      RED_LIGHT = 1; // already occupied - flash red and exit
+ 219   4      //                              }
+ 220   4                                      
+ 221   4                              }       
+ 222   3      
+ 223   3                              qqq:
+ 224   3                              YELLOW_LIGHT =0;
+ 225   3                              delayFunction(10000); // for debounce
+ 226   3                              delayFunction(10000); // for debounce           
+ 227   3                              delayFunction(10000); // for debounce   
+ 228   3                              delayFunction(10000); // for debounce   
+ 229   3                      
+ 230   3                      }
+ 231   2                       
+ 232   2              
+ 233   2                      
+ 234   2                      
+ 235   2                      
+ 236   2              
+ 237   2      
+ 238   2                               
+ 239   2                         /*
+ 240   2      
+ 241   2                      
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 5   
+
+ 242   2      
+ 243   2      
+ 244   2                      // use coordinates to set the board values
+ 245   2                      if(board[x][y] == 0)
+ 246   2                      {
+ 247   2                              // selected place is free. assign it to current player
+ 248   2                              board[x][y] = player_turn;
+ 249   2                              
+ 250   2                              GREEN_LIGHT = 1;
+ 251   2                              delayFunction(60000);
+ 252   2                              GREEN_LIGHT = 0;
+ 253   2              
+ 254   2                              GREEN_LIGHT = 1;
+ 255   2                              delayFunction(60000);
+ 256   2                              GREEN_LIGHT = 0;
+ 257   2      
+ 258   2                              GREEN_LIGHT = 1;
+ 259   2                              delayFunction(60000);
+ 260   2                              GREEN_LIGHT = 0;
+ 261   2      
+ 262   2                              switch(x)
+ 263   2                              {
+ 264   2                                      case 0:
+ 265   2                                              switch(y)
+ 266   2                                              {
+ 267   2                                                case 0:        // 0, 0
+ 268   2                                                              if(player_turn == 1)
+ 269   2                                                              {
+ 270   2                                                                      X_0 = 1;
+ 271   2                                                              }
+ 272   2                                                              else if(player_turn == -1)
+ 273   2                                                              {
+ 274   2                                                                      Y_0 = 1;
+ 275   2                                                              }
+ 276   2                                                      break;
+ 277   2                                                case 1:       // 0, 1
+ 278   2                                                              if(player_turn == 1)
+ 279   2                                                              {
+ 280   2                                                                      X_1 = 1;
+ 281   2                                                              }
+ 282   2                                                              else if(player_turn == -1)
+ 283   2                                                              {
+ 284   2                                                                      Y_1 = 1;
+ 285   2                                                              }
+ 286   2                                                      break;
+ 287   2                                                case 2:  // 0, 2
+ 288   2                                                              if(player_turn == 1)
+ 289   2                                                              {
+ 290   2                                                                      X_2 = 1;
+ 291   2                                                              }
+ 292   2                                                              else if(player_turn == -1)
+ 293   2                                                              {
+ 294   2                                                                      Y_2 = 1;        
+ 295   2                                                              }
+ 296   2                                                      break;
+ 297   2                                                default: ;
+ 298   2                                              } 
+ 299   2                                              break;
+ 300   2                                      case 1:   
+ 301   2                                              switch(y)
+ 302   2                                              {
+ 303   2                                                case 0:   // 1, 0
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 6   
+
+ 304   2                                                              if(player_turn == 1)
+ 305   2                                                              {
+ 306   2                                                                      X_3 = 1;        
+ 307   2                                                              }
+ 308   2                                                              else if(player_turn == -1)
+ 309   2                                                              {
+ 310   2                                                                      Y_3 = 1;
+ 311   2                                                              }
+ 312   2                                                      break;
+ 313   2                                                case 1:  // 1, 1
+ 314   2                                                              if(player_turn == 1)
+ 315   2                                                              {
+ 316   2                                                                      X_4 = 1;
+ 317   2                                                              }
+ 318   2                                                              else if(player_turn == -1)
+ 319   2                                                              {
+ 320   2                                                                      Y_4 = 1;        
+ 321   2                                                              }
+ 322   2                                                      break;
+ 323   2                                                case 2:   // 1, 2
+ 324   2                                                              if(player_turn == 1)
+ 325   2                                                              {
+ 326   2                                                                      X_5 = 1;
+ 327   2                                                              }
+ 328   2                                                              else if(player_turn == -1)
+ 329   2                                                              {
+ 330   2                                                                      Y_5 = 1;
+ 331   2                                                              }
+ 332   2                                                      break;
+ 333   2                                                default: ;
+ 334   2                                              }
+ 335   2                                              break;
+ 336   2                                      case 2:
+ 337   2                                              switch(y)
+ 338   2                                              {
+ 339   2                                                case 0:   // 2, 0
+ 340   2                                                              if(player_turn == 1)
+ 341   2                                                              {
+ 342   2                                                                      X_6 = 1;        
+ 343   2                                                              }
+ 344   2                                                              else if(player_turn == -1)
+ 345   2                                                              {
+ 346   2                                                                      Y_6 = 1;
+ 347   2                                                              }
+ 348   2                                                      break;
+ 349   2                                                case 1:  // 2, 1
+ 350   2                                                              if(player_turn == 1)
+ 351   2                                                              {
+ 352   2                                                                      X_7 = 1;
+ 353   2                                                              }
+ 354   2                                                              else if(player_turn == -1)
+ 355   2                                                              {
+ 356   2                                                                      Y_7 = 1;
+ 357   2                                                              }
+ 358   2                                                      break;
+ 359   2                                                case 2:   // 2, 2
+ 360   2                                                              if(player_turn == 1)
+ 361   2                                                              {
+ 362   2                                                                      Z_0 = 1;        
+ 363   2                                                              }
+ 364   2                                                              else if(player_turn == -1)
+ 365   2                                                              {
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 7   
+
+ 366   2                                                                      Z_1 = 1;        
+ 367   2                                                              }
+ 368   2                                                      break;
+ 369   2                                                default:      ;
+ 370   2                                              }
+ 371   2                                              break;
+ 372   2                                      default:  ;
+ 373   2      
+ 374   2                              }
+ 375   2                              // Accepted Input
+ 376   2                              GREEN_LIGHT = 1;
+ 377   2                              delayFunction(50000);
+ 378   2                              GREEN_LIGHT = 0;
+ 379   2                              player_turn *= -1;
+ 380   2                      }
+ 381   2                      else
+ 382   2                      {
+ 383   2                              // selected place is already occupied.
+ 384   2                              // Glow red light for sometime and go back
+ 385   2                              RED_LIGHT = 1;
+ 386   2                              delayFunction(50000);
+ 387   2                              RED_LIGHT = 0;
+ 388   2      
+ 389   2                              RED_LIGHT = 1;
+ 390   2                              delayFunction(50000);
+ 391   2                              RED_LIGHT = 0;
+ 392   2      
+ 393   2                              RED_LIGHT = 1;
+ 394   2                              delayFunction(50000);
+ 395   2                              RED_LIGHT = 0;
+ 396   2                              continue;
+ 397   2                              
+ 398   2                      }
+ 399   2                      
+ 400   2                      // To determine winner, check if three in a row
+ 401   2                      
+ 402   2                      for(i = 0; i < 3; i++)
+ 403   2                      {
+ 404   2                              // for checking row wise - i is row number
+ 405   2                              if(board[i][0] == board[i][1] == board[i][2])
+ 406   2                              {
+ 407   2                                      if(board[i][0] == 1)
+ 408   2                                      {
+ 409   2                                              declareWinner(1);
+ 410   2                                      }
+ 411   2                                      else
+ 412   2                                      {
+ 413   2                                              declareWinner(-1);
+ 414   2                                      }
+ 415   2                              }
+ 416   2                              // for checking column wise - i is now column number
+ 417   2                         if(board[0][i] == board[1][i] == board[2][i])
+ 418   2                         {
+ 419   2                                      if(board[0][i] == 1)
+ 420   2                                      {
+ 421   2                                              declareWinner(1);
+ 422   2                                      }
+ 423   2                                      else
+ 424   2                                      {
+ 425   2                                      declareWinner(-1);
+ 426   2                                      }
+ 427   2                                                      
+C51 COMPILER V9.05   TIC_TAC_TOE                                                           11/13/2012 03:21:33 PAGE 8   
+
+ 428   2                         }
+ 429   2                         
+ 430   2                      }
+ 431   2      
+ 432   2                      if(board[0][0] == board[1][1] == board[2][2])
+ 433   2                      {
+ 434   2                                      if(board[0][0] == 1)
+ 435   2                                      {
+ 436   2                                              declareWinner(1);
+ 437   2                                      }
+ 438   2                                      else
+ 439   2                                      {
+ 440   2                                              declareWinner(-1);
+ 441   2                                      }
+ 442   2                      }
+ 443   2                      else if(board[0][2] == board[1][1] == board[2][0])
+ 444   2                      {
+ 445   2                                      if(board[0][2] == 1)
+ 446   2                                      {
+ 447   2                                              declareWinner(1);
+ 448   2                                      }
+ 449   2                                      else
+ 450   2                                      {
+ 451   2                                              declareWinner(-1);
+ 452   2                                      }
+ 453   2                      }
+ 454   2                      */
+ 455   2      
+ 456   2      
+ 457   2                      
+ 458   2              }       
+ 459   1      }
+*** WARNING C280 IN LINE 87 OF Tic Tac Toe.c: 'i': unreferenced local variable
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    301    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

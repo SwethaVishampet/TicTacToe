@@ -1,0 +1,3 @@
+"lcd_test.obj" 
+TO "lcd_test" 
+CODE( 0X0000-0X0FFF )
